@@ -15,6 +15,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 
@@ -22,16 +23,20 @@ import java.util.List;
 @Profile({"dev", "postgres"})
 public class DataInitializer {
 
+    // Mot de passe démo commun à tous les comptes seedés : "demo123"
+    private static final String DEMO_PASSWORD_RAW = "demo123";
+
     @Bean
     CommandLineRunner seedData(
             EntrepriseRepository entrepriseRepository,
             EtudiantRepository etudiantRepository,
             MissionRepository missionRepository,
-            CandidatureRepository candidatureRepository
+            CandidatureRepository candidatureRepository,
+            PasswordEncoder passwordEncoder
     ) {
         return args -> {
             if (entrepriseRepository.count() == 0) {
-                seedFullDemo(entrepriseRepository, etudiantRepository, missionRepository, candidatureRepository);
+                seedFullDemo(entrepriseRepository, etudiantRepository, missionRepository, candidatureRepository, passwordEncoder);
             } else if (candidatureRepository.count() == 0) {
                 seedCandidaturesForDashboard(etudiantRepository, missionRepository, candidatureRepository);
             }
@@ -42,11 +47,12 @@ public class DataInitializer {
             EntrepriseRepository entrepriseRepository,
             EtudiantRepository etudiantRepository,
             MissionRepository missionRepository,
-            CandidatureRepository candidatureRepository
+            CandidatureRepository candidatureRepository,
+            PasswordEncoder passwordEncoder
     ) {
         Entreprise entreprise = new Entreprise();
         entreprise.setEmail("contact@techcorp.fr");
-        entreprise.setMotDePasse("demo");
+        entreprise.setMotDePasse(passwordEncoder.encode(DEMO_PASSWORD_RAW));
         entreprise.setNom("TechCorp");
         entreprise.setRole(RoleUtilisateur.ENTREPRISE);
         entreprise.setSecteur("IT");
@@ -57,7 +63,8 @@ public class DataInitializer {
                 "alice@univ.fr", "Alice Martin", "Informatique", 3,
                 List.of("Java", "Angular", "PostgreSQL", "Docker"),
                 1, 3, 72.0, 85, 15,
-                "Développeuse full-stack — 3 projets web et mobile."
+                "Développeuse full-stack — 3 projets web et mobile.",
+                passwordEncoder
         );
         alice = etudiantRepository.save(alice);
 
@@ -65,7 +72,8 @@ public class DataInitializer {
                 "bob@univ.fr", "Bob Dupont", "Data Science", 2,
                 List.of("Python", "Machine Learning", "FastAPI", "PostgreSQL"),
                 2, 5, 88.0, 78, 20,
-                "Data scientist — projets NLP et APIs Python."
+                "Data scientist — projets NLP et APIs Python.",
+                passwordEncoder
         );
         bob = etudiantRepository.save(bob);
 
@@ -73,7 +81,8 @@ public class DataInitializer {
                 "claire@univ.fr", "Claire Leroy", "Génie logiciel", 4,
                 List.of("Java", "Spring Boot", "React", "DevOps"),
                 2, 4, 80.0, 90, 12,
-                "Ingénieure logiciel — expérience microservices."
+                "Ingénieure logiciel — expérience microservices.",
+                passwordEncoder
         );
         claire = etudiantRepository.save(claire);
 
@@ -149,11 +158,12 @@ public class DataInitializer {
     private Etudiant createEtudiant(
             String email, String nom, String filiere, int annee,
             List<String> competences, int exp, int projets, double perf,
-            int soft, int dispo, String cv
+            int soft, int dispo, String cv,
+            PasswordEncoder passwordEncoder
     ) {
         Etudiant e = new Etudiant();
         e.setEmail(email);
-        e.setMotDePasse("demo");
+        e.setMotDePasse(passwordEncoder.encode(DEMO_PASSWORD_RAW));
         e.setNom(nom);
         e.setRole(RoleUtilisateur.ETUDIANT);
         e.setFiliere(filiere);

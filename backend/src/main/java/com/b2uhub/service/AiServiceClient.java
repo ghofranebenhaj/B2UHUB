@@ -3,32 +3,34 @@ package com.b2uhub.service;
 import com.b2uhub.dto.*;
 import com.b2uhub.model.Etudiant;
 import com.b2uhub.model.Mission;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Façade métier au-dessus du client OpenFeign AiServiceFeignClient.
+ * Conserve exactement la même logique de scoring/fallback qu'avant,
+ * seul le transport HTTP a changé (RestClient -> Feign).
+ */
 @Component
 public class AiServiceClient {
 
-    private final RestClient restClient;
-    private final String baseUrl;
+    private final AiServiceFeignClient feignClient;
+    private final ObjectMapper objectMapper;
 
-    public AiServiceClient(@Value("${b2u.ai-service.base-url}") String baseUrl) {
-        this.baseUrl = baseUrl;
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+    public AiServiceClient(AiServiceFeignClient feignClient, ObjectMapper objectMapper) {
+        this.feignClient = feignClient;
+        this.objectMapper = objectMapper;
     }
 
     public boolean isAvailable() {
         try {
-            var status = restClient.get().uri("/api/health").retrieve().body(Map.class);
+            Map<String, Object> status = feignClient.health();
             return status != null && "UP".equals(status.get("status"));
-        } catch (RestClientException e) {
+        } catch (Exception e) {
             return false;
         }
     }
@@ -36,28 +38,22 @@ public class AiServiceClient {
     public ScoreResult scoreCandidature(Etudiant etudiant, Mission mission, double performanceAnterieure) {
         Map<String, Object> body = scorePayload(etudiant, mission, performanceAnterieure);
         try {
-            AiScoreResponse response = restClient.post()
-                    .uri("/api/v1/score")
-                    .body(body)
-                    .retrieve()
-                    .body(AiScoreResponse.class);
-            if (response != null && response.score() != null) {
-                return new ScoreResult(response.score(), response.explication(), response.breakdown(), true);
+            Map<String, Object> response = feignClient.score(body);
+            if (response != null && response.get("score") instanceof Number scoreNum) {
+                String explication = (String) response.get("explication");
+                List<ScoreBreakdownDto> breakdown = castBreakdown(response.get("breakdown"));
+                return new ScoreResult(scoreNum.doubleValue(), explication, breakdown, true);
             }
-        } catch (RestClientException ignored) {
+        } catch (Exception ignored) {
         }
         return computeLocalScore(etudiant, mission, performanceAnterieure);
     }
 
     public SmartMatchingResponseDto smartMatching(Map<String, Object> body) {
         try {
-            Map<String, Object> response = restClient.post()
-                    .uri("/api/v1/agents/smart-matching")
-                    .body(body)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+            Map<String, Object> response = feignClient.smartMatching(body);
             if (response != null) return mapSmartMatching(response);
-        } catch (RestClientException ignored) {
+        } catch (Exception ignored) {
         }
         SmartMatchingResponseDto fallback = new SmartMatchingResponseDto();
         fallback.setAgent("SmartMatchingAgent");
@@ -69,13 +65,9 @@ public class AiServiceClient {
 
     public CollaborationResponseDto collaboration(Map<String, Object> body) {
         try {
-            Map<String, Object> response = restClient.post()
-                    .uri("/api/v1/agents/collaboration")
-                    .body(body)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+            Map<String, Object> response = feignClient.collaboration(body);
             if (response != null) return mapCollaboration(response);
-        } catch (RestClientException ignored) {
+        } catch (Exception ignored) {
         }
         CollaborationResponseDto fallback = new CollaborationResponseDto();
         fallback.setAgent("CollaborationInnovationAgent");
@@ -92,13 +84,15 @@ public class AiServiceClient {
                 "mission_competences", mission.getCompetencesRequises()
         );
         try {
-            AiMatchResponse res = restClient.post()
-                    .uri("/api/v1/match")
-                    .body(body)
-                    .retrieve()
-                    .body(AiMatchResponse.class);
-            if (res != null) return res;
-        } catch (RestClientException ignored) {
+            Map<String, Object> res = feignClient.match(body);
+            if (res != null) {
+                AiMatchResponse response = new AiMatchResponse();
+                if (res.get("similarity") instanceof Number n) response.setSimilarity(n.doubleValue());
+                response.setMethode((String) res.get("methode"));
+                response.setCompetencesCommunes(castStringList(res.get("competences_communes")));
+                return response;
+            }
+        } catch (Exception ignored) {
         }
         double sim = matchingSimilarity(etudiant.getCompetences(), mission.getCompetencesRequises()) * 100;
         AiMatchResponse fallback = new AiMatchResponse();
@@ -124,15 +118,11 @@ public class AiServiceClient {
                 "top_k", topK
         );
         try {
-            Map<String, Object> response = restClient.post()
-                    .uri("/api/v1/recommend")
-                    .body(body)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+            Map<String, Object> response = feignClient.recommend(body);
             if (response != null && response.get("recommandations") instanceof List<?> list) {
                 return list.stream().map(this::mapRecommend).toList();
             }
-        } catch (RestClientException ignored) {
+        } catch (Exception ignored) {
         }
         return List.of();
     }
@@ -153,11 +143,7 @@ public class AiServiceClient {
                 "taille_equipe", taille
         );
         try {
-            Map<String, Object> response = restClient.post()
-                    .uri("/api/v1/team")
-                    .body(body)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+            Map<String, Object> response = feignClient.team(body);
             if (response != null) {
                 double coverage = response.get("couverture_competences") instanceof Number n ? n.doubleValue() : 0;
                 String explication = (String) response.get("explication");
@@ -170,7 +156,7 @@ public class AiServiceClient {
                 }
                 return new TeamResult(ids, coverage, explication, true);
             }
-        } catch (RestClientException ignored) {
+        } catch (Exception ignored) {
         }
         return new TeamResult(List.of(), 0, "Service IA indisponible — formation locale impossible.", false);
     }
@@ -181,11 +167,7 @@ public class AiServiceClient {
                 "competences_connues", etudiant.getCompetences()
         );
         try {
-            Map<String, Object> response = restClient.post()
-                    .uri("/api/v1/cv/analyze")
-                    .body(body)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+            Map<String, Object> response = feignClient.analyzeCv(body);
             if (response != null) {
                 return new CvAnalysisResult(
                         castStringList(response.get("competences_detectees")),
@@ -194,7 +176,7 @@ public class AiServiceClient {
                         true
                 );
             }
-        } catch (RestClientException ignored) {
+        } catch (Exception ignored) {
         }
         return new CvAnalysisResult(etudiant.getCompetences(), List.of(), 50.0, false);
     }
@@ -283,6 +265,15 @@ public class AiServiceClient {
         return List.of();
     }
 
+    private List<ScoreBreakdownDto> castBreakdown(Object value) {
+        if (value instanceof List<?> list) {
+            return list.stream()
+                    .map(item -> objectMapper.convertValue(item, ScoreBreakdownDto.class))
+                    .toList();
+        }
+        return List.of();
+    }
+
     public double matchingSimilarity(List<String> etudiantCompetences, List<String> missionCompetences) {
         if (etudiantCompetences == null || missionCompetences == null || missionCompetences.isEmpty()) {
             return 0.0;
@@ -312,6 +303,4 @@ public class AiServiceClient {
     public record TeamCandidate(Long etudiantId, String nom, List<String> competences, double scoreIa) {}
     public record TeamResult(List<Long> memberIds, double coverage, String explication, boolean fromAi) {}
     public record CvAnalysisResult(List<String> competences, List<String> keywords, double score, boolean fromAi) {}
-
-    private record AiScoreResponse(Double score, String explication, List<ScoreBreakdownDto> breakdown) {}
 }

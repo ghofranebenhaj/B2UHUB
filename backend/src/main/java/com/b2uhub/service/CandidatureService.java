@@ -30,6 +30,13 @@ public class CandidatureService {
     private final AiHubService aiHubService;
     private final NotificationService notificationService;
     private final double preselectionScoreThreshold;
+    private final int maxCandidaturesActives;
+
+    private static final List<CandidatureStatut> STATUTS_ACTIFS = List.of(
+            CandidatureStatut.EN_ATTENTE,
+            CandidatureStatut.PRESELECTIONNEE,
+            CandidatureStatut.ENTRETIEN
+    );
 
     public CandidatureService(
             CandidatureRepository candidatureRepository,
@@ -39,7 +46,8 @@ public class CandidatureService {
             AiServiceClient aiServiceClient,
             AiHubService aiHubService,
             NotificationService notificationService,
-            @Value("${b2u.candidature.preselection-score-threshold:70}") double preselectionScoreThreshold
+            @Value("${b2u.candidature.preselection-score-threshold:70}") double preselectionScoreThreshold,
+            @Value("${b2u.candidature.max-candidatures-actives:5}") int maxCandidaturesActives
     ) {
         this.candidatureRepository = candidatureRepository;
         this.historiqueRepository = historiqueRepository;
@@ -49,6 +57,7 @@ public class CandidatureService {
         this.aiHubService = aiHubService;
         this.notificationService = notificationService;
         this.preselectionScoreThreshold = preselectionScoreThreshold;
+        this.maxCandidaturesActives = maxCandidaturesActives;
     }
 
     public List<CandidatureResponse> findByMission(Long missionId) {
@@ -68,6 +77,16 @@ public class CandidatureService {
     public CandidatureResponse postuler(CandidatureRequest request) {
         if (candidatureRepository.existsByMissionIdAndEtudiantId(request.getMissionId(), request.getEtudiantId())) {
             throw new BusinessException("Candidature déjà existante pour cette mission");
+        }
+
+        long candidaturesActives = candidatureRepository.countByEtudiantIdAndStatutIn(
+                request.getEtudiantId(), STATUTS_ACTIFS
+        );
+        if (candidaturesActives >= maxCandidaturesActives) {
+            throw new BusinessException(
+                    "Limite de " + maxCandidaturesActives + " candidatures actives atteinte. " +
+                    "Attendez une réponse avant de postuler à nouveau."
+            );
         }
 
         Mission mission = missionService.getMission(request.getMissionId());

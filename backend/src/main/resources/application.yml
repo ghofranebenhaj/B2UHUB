@@ -43,6 +43,14 @@ b2u:
     base-url: ${B2U_AI_SERVICE_BASE_URL:http://localhost:8000}
   candidature:
     preselection-score-threshold: ${B2U_PRESELECTION_THRESHOLD:70}
+    max-candidatures-actives: ${B2U_MAX_CANDIDATURES_ACTIVES:5}
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 3000
 
 ---
 # PostgreSQL — base persistante (recommandé PFE / Docker)

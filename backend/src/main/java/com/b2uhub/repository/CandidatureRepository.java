@@ -22,4 +22,6 @@ public interface CandidatureRepository extends JpaRepository<Candidature, Long> 
     long countByMissionId(Long missionId);
 
     boolean existsByMissionIdAndStatut(Long missionId, CandidatureStatut statut);
+
+    long countByEtudiantIdAndStatutIn(Long etudiantId, List<CandidatureStatut> statuts);
 }

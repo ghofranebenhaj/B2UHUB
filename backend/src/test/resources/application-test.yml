@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:b2uhub_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+b2u:
+  cors:
+    allowed-origins: http://localhost:4200
+  jwt:
+    secret: test-secret-key-for-integration-tests-at-least-256-bits-long
+    expiration-ms: 3600000
+  ai-service:
+    base-url: http://localhost:9999
+  candidature:
+    preselection-score-threshold: 70
+    max-candidatures-actives: 5
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 500
+        readTimeout: 500
