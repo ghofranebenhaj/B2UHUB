@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: b2uhub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: b2uhub
+      POSTGRES_USER: b2uhub
+      POSTGRES_PASSWORD: b2uhub
+    ports:
+      - "5432:5432"
+    volumes:
+      - b2uhub_pg_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U b2uhub -d b2uhub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: b2uhub-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@b2uhub.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - b2uhub_pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: b2uhub
+      DB_USER: b2uhub
+      DB_PASSWORD: b2uhub
+      B2U_AI_SERVICE_BASE_URL: http://ai-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm install && npm start -- --host 0.0.0.0"
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
+
+volumes:
+  b2uhub_pg_data:
+  b2uhub_pgadmin_data:

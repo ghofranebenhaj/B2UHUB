@@ -1,0 +1,77 @@
+<a routerLink="/missions" class="back">← Retour aux missions</a>
+
+<section class="form-section">
+  <h1>{{ isEdit ? 'Modifier la mission' : 'Nouvelle mission' }}</h1>
+  <p class="subtitle">CRUD Module 1 — Publication entreprise</p>
+
+  @if (loading) {
+    <p class="status">Chargement...</p>
+  } @else {
+    <form class="card form-card" (ngSubmit)="submit()">
+      <label>
+        Titre *
+        <input type="text" [(ngModel)]="titre" name="titre" required placeholder="Ex: Application mobile B2U" />
+      </label>
+
+      <label>
+        Description *
+        <textarea [(ngModel)]="description" name="description" rows="5" required
+          placeholder="Décrivez le projet, les livrables attendus..."></textarea>
+      </label>
+
+      <label>
+        Entreprise *
+        <select
+          [(ngModel)]="entrepriseId"
+          name="entrepriseId"
+          required
+          [compareWith]="compareIds"
+        >
+          <option [ngValue]="null" disabled>-- Choisir une entreprise --</option>
+          @for (e of entreprises; track e.id) {
+            <option [ngValue]="e.id">{{ e.nom }}@if (e.secteur) { — {{ e.secteur }}}</option>
+          }
+        </select>
+        @if (entrepriseHint) {
+          <small class="hint">{{ entrepriseHint }}</small>
+        }
+        @if (entreprises.length > 0 && entrepriseId) {
+          <small class="hint ok">Sélection : ID {{ entrepriseId }}</small>
+        }
+      </label>
+
+      <label>
+        Compétences requises
+        <input type="text" [(ngModel)]="competencesText" name="competences"
+          placeholder="Java, Angular, PostgreSQL (séparées par des virgules)" />
+      </label>
+
+      <div class="row">
+        <label>
+          Durée (semaines)
+          <input type="number" [(ngModel)]="dureeSemaines" name="duree" min="1" placeholder="12" />
+        </label>
+
+        <label>
+          Statut
+          <select [(ngModel)]="statut" name="statut">
+            <option value="OUVERTE">Ouverte</option>
+            <option value="EN_COURS">En cours</option>
+            <option value="CLOTUREE">Clôturée</option>
+          </select>
+        </label>
+      </div>
+
+      @if (error) {
+        <p class="error-msg">{{ error }}</p>
+      }
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" [disabled]="saving">
+          {{ saving ? 'Enregistrement...' : (isEdit ? 'Mettre à jour' : 'Publier la mission') }}
+        </button>
+        <a routerLink="/missions" class="btn btn-cancel">Annuler</a>
+      </div>
+    </form>
+  }
+</section>

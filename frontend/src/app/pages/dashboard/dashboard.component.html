@@ -1,0 +1,52 @@
+<section>
+  <div class="page-header">
+    <div>
+      <h1>Dashboard Analytics</h1>
+      <p class="subtitle">Module 3 — Vue d'ensemble des missions et candidatures</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="load()" [disabled]="loading">Actualiser</button>
+  </div>
+
+  @if (loading) {
+    <p class="status">Chargement...</p>
+  } @else if (error) {
+    <div class="card error-box">
+      <p class="status error">{{ error }}</p>
+      <button type="button" class="btn btn-accent" (click)="load()">Réessayer</button>
+    </div>
+  } @else if (summary) {
+    <div class="kpi-grid">
+      <div class="card kpi">
+        <span class="kpi-value">{{ summary.missionsOuvertes }}</span>
+        <span class="kpi-label">Missions ouvertes</span>
+      </div>
+      <div class="card kpi">
+        <span class="kpi-value">{{ summary.missionsEnCours }}</span>
+        <span class="kpi-label">Missions en cours</span>
+      </div>
+      <div class="card kpi">
+        <span class="kpi-value">{{ summary.candidaturesEnAttente }}</span>
+        <span class="kpi-label">Candidatures en attente</span>
+      </div>
+      <div class="card kpi">
+        <span class="kpi-value">{{ summary.candidaturesAcceptees }}</span>
+        <span class="kpi-label">Candidatures acceptées</span>
+      </div>
+      <div class="card kpi accent">
+        <span class="kpi-value">{{ summary.scoreMoyen | number:'1.1-1' }}</span>
+        <span class="kpi-label">Score IA moyen (/100)</span>
+      </div>
+    </div>
+
+    <div class="card chart-card">
+      <h2>Répartition</h2>
+      <div class="chart-wrap">
+        <canvas baseChart
+          [type]="barChartType"
+          [data]="barChartData"
+          [options]="barChartOptions">
+        </canvas>
+      </div>
+    </div>
+  }
+</section>

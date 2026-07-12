@@ -1,0 +1,14 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { AnalyticsSummary } from '../../models/analytics.model';
+
+@Injectable({ providedIn: 'root' })
+export class AnalyticsService {
+  private readonly http = inject(HttpClient);
+
+  getSummary(): Observable<AnalyticsSummary> {
+    return this.http.get<AnalyticsSummary>(`${environment.apiUrl}/analytics/summary`);
+  }
+}

@@ -1,0 +1,121 @@
+<a routerLink="/missions" class="back">← Retour aux missions</a>
+
+@if (loading) {
+  <p class="status">Chargement...</p>
+} @else if (mission) {
+  <article class="card detail">
+    <div class="detail-header">
+      <h1>{{ mission.titre }}</h1>
+      @if (session.canVoirCandidats(mission)) {
+        <div class="detail-actions">
+          <a [routerLink]="['/missions', mission.id, 'edit']" class="btn-sm btn-edit">Modifier</a>
+          <button type="button" class="btn-sm btn-delete" (click)="supprimer()">Supprimer</button>
+        </div>
+      }
+    </div>
+    <p class="entreprise">{{ mission.entrepriseNom }}</p>
+    <p class="candidat-count">{{ candidatLabel() }}</p>
+    @if (session.canVoirCandidats(mission)) {
+      <label class="statut-label">
+        Statut
+        <select [ngModel]="mission.statut" (ngModelChange)="changerStatut($event)">
+          <option value="OUVERTE">Ouverte</option>
+          <option value="EN_COURS">En cours</option>
+          <option value="CLOTUREE">Clôturée</option>
+        </select>
+      </label>
+    } @else {
+      <p class="statut-readonly">Statut : <strong>{{ mission.statut }}</strong></p>
+    }
+    <p class="description">{{ mission.description }}</p>
+    <div class="tags">
+      @for (c of mission.competencesRequises; track c) {
+        <span class="tag">{{ c }}</span>
+      }
+    </div>
+    <div class="ia-actions">
+      @if (session.canPostuler(mission)) {
+        <button type="button" class="btn btn-primary" (click)="previewMatch()">Preview matching IA</button>
+        <button type="button" class="btn btn-accent btn-postuler" (click)="postuler()" [disabled]="applying">
+          {{ applying ? 'Envoi...' : 'Postuler' }}
+        </button>
+      }
+      @if (session.canVoirCandidats(mission)) {
+        <a [routerLink]="['/missions', mission.id, 'candidatures']" class="btn btn-candidats">
+          Voir les candidats
+        </a>
+        <button type="button" class="btn btn-primary" (click)="formTeam()" [disabled]="formingTeam">
+          {{ formingTeam ? 'Formation...' : 'Former équipe IA' }}
+        </button>
+      }
+    </div>
+    @if (matchPreview) {
+      <p class="match-preview">Matching pré-candidature : <strong>{{ matchPreview.similarity | number:'1.1-1' }}%</strong></p>
+    }
+    @if (equipe) {
+      <div class="equipe card">
+        <strong>{{ equipe.nom }}</strong> — {{ equipe.membresNoms.join(', ') }}
+        @if (equipe.couvertureCompetences != null) {
+          <span> · Couverture {{ equipe.couvertureCompetences | number:'1.0-0' }}%</span>
+        }
+      </div>
+    }
+    @if (message) {
+      <p class="message">{{ message }}</p>
+    }
+  </article>
+
+  @if (session.canVoirCandidats(mission)) {
+    <section class="candidatures" id="candidatures">
+      <h2>Candidatures — triées par score IA</h2>
+      @if (candidatures.length === 0) {
+        <p class="status">Aucune candidature pour cette mission.</p>
+      } @else {
+        <div class="cand-list">
+          @for (c of candidatures; track c.id; let i = $index) {
+            <div class="card cand-card">
+              <div class="cand-header">
+                <span class="rank">#{{ i + 1 }}</span>
+                <strong>{{ c.etudiantNom }}</strong>
+                <span [class]="statutClass(c.statut)">{{ c.statut }}</span>
+              </div>
+              @if (c.scoreIA != null) {
+                <p class="score">
+                  Score IA : <strong>{{ c.scoreIA | number:'1.1-1' }}/100</strong>
+                  @if (c.scoreFromAi) { <span class="ai-badge">FastAPI</span> }
+                </p>
+                @if (c.scoreBreakdown?.length) {
+                  <table class="breakdown">
+                    <thead>
+                      <tr><th>Critère</th><th>Note</th><th>Poids</th><th>Contribution</th></tr>
+                    </thead>
+                    <tbody>
+                      @for (b of c.scoreBreakdown; track b.critere) {
+                        <tr>
+                          <td>{{ b.critere }}</td>
+                          <td>{{ b.note | number:'1.1-1' }}</td>
+                          <td>{{ b.poids * 100 | number:'1.0-0' }}%</td>
+                          <td>+{{ b.contribution | number:'1.1-1' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                } @else if (c.explicationScore) {
+                  <p class="explain">{{ c.explicationScore }}</p>
+                }
+              }
+              @if (c.statut === 'EN_ATTENTE') {
+                <div class="actions">
+                  <button class="btn btn-primary" (click)="valider(c.id, 'ACCEPTEE')">Accepter</button>
+                  <button class="btn" style="background:#fee2e2;color:#b91c1c" (click)="valider(c.id, 'REFUSEE')">Refuser</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+} @else {
+  <p class="status error">{{ message || 'Mission introuvable.' }}</p>
+}

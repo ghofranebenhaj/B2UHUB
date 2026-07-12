@@ -1,0 +1,96 @@
+<section class="ia-page">
+  <header class="page-header">
+    <h1>Agents IA B2U-HUB</h1>
+    <p class="subtitle">3 propositions intelligentes — comme dans le cahier des charges PFE</p>
+  </header>
+
+  <div class="status-bar card">
+    <span class="dot" [class.up]="status?.aiServiceUp" [class.down]="!status?.aiServiceUp"></span>
+    <span>FastAPI {{ status?.aiServiceUp ? 'en ligne' : 'hors ligne' }}</span>
+    @if (collaboration?.llmActive) {
+      <span class="llm-badge">LLM actif</span>
+    }
+  </div>
+
+  <div class="controls card">
+    <label>Étudiant <select [(ngModel)]="selectedEtudiantId"><option [ngValue]="1">Alice Martin</option><option [ngValue]="2">Bob Dupont</option></select></label>
+    <label>Mission <select [(ngModel)]="selectedMissionId">@for (m of missions; track m.id) { <option [ngValue]="m.id">{{ m.titre }}</option> }</select></label>
+  </div>
+
+  <!-- AGENT 1 -->
+  <article class="agent-card card">
+    <div class="agent-head">
+      <span class="agent-icon">🎯</span>
+      <div>
+        <h2>Agent IA Smart Matching</h2>
+        <p class="agent-desc">Analyse les compétences des étudiants et les besoins des entreprises pour proposer les meilleurs profils ou former des équipes équilibrées.</p>
+      </div>
+    </div>
+    <div class="exemple">
+      <strong>Exemple :</strong> Alice (Java, Angular) → mission TechCorp à 92% — équipe [Alice, Bob] couverture 85%.
+    </div>
+    <button class="btn btn-primary" (click)="runSmartMatching()">Lancer Smart Matching</button>
+    @if (smartMatching) {
+      <p class="agent-message">{{ smartMatching.message }}</p>
+      <div class="profiles">
+        @for (p of smartMatching.profilsRecommandes; track p.missionId) {
+          <div class="profile-item">
+            <a [routerLink]="['/missions', p.missionId]">{{ p.missionTitre }}</a>
+            <span class="badge-rec">{{ p.recommandation }}</span>
+            <span class="score">{{ p.scoreMatching | number:'1.0-0' }}%</span>
+            <small>{{ p.justification }}</small>
+          </div>
+        }
+      </div>
+      @if (smartMatching.suggestionEquipe) {
+        <p class="team-hint"><strong>Équipe suggérée :</strong> {{ smartMatching.suggestionEquipe.membres.join(', ') }} — {{ smartMatching.suggestionEquipe.explication }}</p>
+      }
+    }
+  </article>
+
+  <!-- AGENT 2 -->
+  <article class="agent-card card scoring">
+    <div class="agent-head">
+      <span class="agent-icon">📊</span>
+      <div>
+        <h2>Système de Scoring Automatique</h2>
+        <p class="agent-desc">Évalue les candidatures : compétences (35%), projets passés (25%), soft skills (20%), performance antérieure (20%). Score objectif et transparent.</p>
+      </div>
+    </div>
+    <div class="exemple">
+      <strong>Exemple :</strong> Compétences 88×35% + 3 projets×25% + soft 85×20% + perf. 72×20% = <strong>81.4/100</strong>
+    </div>
+    <a routerLink="/missions" class="btn btn-accent">Tester sur une mission → Postuler</a>
+    <p class="hint">Le détail critère par critère s'affiche sur chaque candidature (explainability).</p>
+  </article>
+
+  <!-- AGENT 3 -->
+  <article class="agent-card card collab">
+    <div class="agent-head">
+      <span class="agent-icon">💡</span>
+      <div>
+        <h2>Agent Collaboration &amp; Innovation</h2>
+        <p class="agent-desc">Détecte des opportunités entre entreprises, laboratoires et étudiants en analysant thématiques, expertises et projets en cours. LLM optionnel (OPENAI_API_KEY).</p>
+      </div>
+    </div>
+    <div class="exemple">
+      <strong>Exemple :</strong> Lab IA ENSIAS × TechCorp sur mission « Application B2U » — consortium PFE recommandé.
+    </div>
+    <button class="btn btn-primary" (click)="runCollaboration()">Détecter opportunités</button>
+    @if (collaboration) {
+      <p class="agent-message">{{ collaboration.message }}</p>
+      @if (collaboration.llmActive) { <span class="llm-badge">Enrichi par LLM</span> }
+      <div class="opportunities">
+        @for (o of collaboration.opportunites; track o.titre) {
+          <div class="opp-item">
+            <span class="opp-type">{{ o.type }}</span>
+            <h3>{{ o.titre }}</h3>
+            <p>{{ o.description }}</p>
+            <p class="opp-action">→ {{ o.actionSuggeree }}</p>
+            <span class="score">{{ o.scorePotentiel | number:'1.0-0' }}% potentiel</span>
+          </div>
+        }
+      </div>
+    }
+  </article>
+</section>

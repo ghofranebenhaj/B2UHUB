@@ -1,0 +1,87 @@
+spring:
+  application:
+    name: b2u-hub-backend
+
+  profiles:
+    active: dev
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:h2:mem:b2uhub;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080
+
+b2u:
+  cors:
+    allowed-origins: http://localhost:4200
+  jwt:
+    secret: change-me-in-production-use-at-least-256-bits-secret-key-b2uhub
+    expiration-ms: 86400000
+  ai-service:
+    base-url: ${B2U_AI_SERVICE_BASE_URL:http://localhost:8000}
+  candidature:
+    preselection-score-threshold: ${B2U_PRESELECTION_THRESHOLD:70}
+
+---
+# PostgreSQL — base persistante (recommandé PFE / Docker)
+spring:
+  config:
+    activate:
+      on-profile: postgres
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:b2uhub}
+    username: ${DB_USER:b2uhub}
+    password: ${DB_PASSWORD:b2uhub}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:b2uhub}
+    username: ${DB_USER:b2uhub}
+    password: ${DB_PASSWORD:b2uhub}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect

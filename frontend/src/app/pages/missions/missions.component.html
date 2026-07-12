@@ -1,0 +1,90 @@
+<section>
+  <div class="page-header">
+    <div>
+      <h1>Missions</h1>
+      <p class="subtitle">Module 1 — Publication et recherche de missions</p>
+    </div>
+    @if (session.isEntreprise()) {
+      <a routerLink="/missions/new" class="btn btn-accent">+ Nouvelle mission</a>
+    }
+  </div>
+
+  <div class="filters card">
+    <div class="filter-row">
+      <label>
+        Statut
+        <select [(ngModel)]="filterStatut" (change)="load()">
+          <option value="">Tous</option>
+          <option value="OUVERTE">Ouverte</option>
+          <option value="EN_COURS">En cours</option>
+          <option value="CLOTUREE">Clôturée</option>
+        </select>
+      </label>
+      <label>
+        Compétence
+        <input type="text" [(ngModel)]="filterCompetence" placeholder="ex: Java" (keyup.enter)="load()" />
+      </label>
+      <label>
+        Titre
+        <input type="text" [(ngModel)]="filterTitre" placeholder="Rechercher..." (keyup.enter)="load()" />
+      </label>
+      <button class="btn btn-primary" (click)="load()">Filtrer</button>
+    </div>
+  </div>
+
+  @if (success) {
+    <p class="success-msg">{{ success }}</p>
+  }
+
+  @if (loading) {
+    <p class="status">Chargement...</p>
+  } @else if (error) {
+    <p class="status error">{{ error }}</p>
+  } @else if (missions.length === 0) {
+    <p class="status">Aucune mission trouvée.
+      @if (session.isEntreprise()) {
+        <a routerLink="/missions/new">Créer la première mission</a>
+      }
+    </p>
+  } @else {
+    <div class="grid">
+      @for (m of missions; track m.id) {
+        <article class="card mission-card">
+          <div class="card-top">
+            <h2>
+              <a [routerLink]="['/missions', m.id]">{{ m.titre }}</a>
+            </h2>
+            <span [class]="statutClass(m.statut)">{{ m.statut }}</span>
+          </div>
+          <p class="entreprise">{{ m.entrepriseNom }}</p>
+          <p class="candidat-count">{{ candidatLabel(m.candidatCount) }}</p>
+          <p class="desc">{{ m.description | slice:0:120 }}{{ m.description.length > 120 ? '...' : '' }}</p>
+          <div class="tags">
+            @for (c of m.competencesRequises; track c) {
+              <span class="tag">{{ c }}</span>
+            }
+          </div>
+          @if (m.dureeSemaines) {
+            <p class="meta">{{ m.dureeSemaines }} semaines</p>
+          }
+          <div class="card-actions">
+            @if (session.canPostuler(m)) {
+              <a [routerLink]="['/missions', m.id]" class="btn-sm btn-postuler">Postuler</a>
+            }
+            @if (session.canVoirCandidats(m)) {
+              <a [routerLink]="['/missions', m.id, 'candidatures']" class="btn-sm btn-candidats">
+                Voir les candidats
+              </a>
+            }
+            @if (session.canVoirCandidats(m)) {
+              <a [routerLink]="['/missions', m.id, 'edit']" class="btn-sm btn-edit">Modifier</a>
+              <button type="button" class="btn-sm btn-delete" (click)="supprimer(m.id, m.titre)">Supprimer</button>
+            } @else {
+              <a [routerLink]="['/missions', m.id]" class="btn-sm btn-edit">Détail</a>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>

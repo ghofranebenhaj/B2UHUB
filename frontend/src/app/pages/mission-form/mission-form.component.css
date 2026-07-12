@@ -1,0 +1,86 @@
+.back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--primary-light);
+}
+
+.form-section h1 {
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.form-card {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.form-card input,
+.form-card textarea,
+.form-card select {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #e5e7eb;
+  color: var(--text);
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.error-msg {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 400;
+  margin-top: 0.25rem;
+}
+
+.hint.ok {
+  color: var(--success);
+}
+
+.status {
+  color: var(--muted);
+  padding: 1rem 0;
+}

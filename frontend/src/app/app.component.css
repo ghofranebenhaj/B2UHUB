@@ -1,0 +1,105 @@
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  color: white;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+
+.logo-icon {
+  background: var(--accent);
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav a.active,
+.nav a:hover {
+  color: white;
+}
+
+.role-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.role-switch select {
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.85rem;
+}
+
+.main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  min-height: calc(100vh - 140px);
+}
+
+.footer {
+  text-align: center;
+  padding: 1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.notif-panel {
+  position: fixed;
+  top: 4.5rem;
+  right: 1rem;
+  z-index: 1000;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.notif-item {
+  background: white;
+  border-left: 4px solid var(--accent);
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}

@@ -1,0 +1,38 @@
+<header class="header">
+  <div class="header-inner">
+    <a routerLink="/missions" class="logo">
+      <span class="logo-icon">B2U</span>
+      <span class="logo-text">HUB</span>
+    </a>
+    <nav class="nav">
+      <a routerLink="/missions" routerLinkActive="active">Missions</a>
+      <a routerLink="/ia" routerLinkActive="active">Agents IA</a>
+      <a routerLink="/dashboard" routerLinkActive="active">Analytics</a>
+    </nav>
+    <label class="role-switch">
+      <span>Rôle démo</span>
+      <select [ngModel]="session.role" (ngModelChange)="onRoleChange($event)">
+        <option value="ETUDIANT">Étudiant</option>
+        <option value="ENTREPRISE">Entreprise</option>
+      </select>
+    </label>
+    @if (notifications.length) {
+      <div class="notif-panel">
+        @for (n of notifications; track n.message) {
+          <div class="notif-item">
+            <strong>{{ n.titre }}</strong>
+            <span>{{ n.message }}</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</header>
+
+<main class="main">
+  <router-outlet />
+</main>
+
+<footer class="footer">
+  B2U-HUB — Business-to-University Hub · PFE 2026
+</footer>

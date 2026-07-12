@@ -1,0 +1,75 @@
+<a [routerLink]="['/missions', mission?.id]" class="back">← Retour à la mission</a>
+
+@if (loading) {
+  <p class="status">Chargement...</p>
+} @else if (error) {
+  <p class="status error">{{ error }}</p>
+} @else if (mission) {
+  <section class="header-block">
+    <h1>Candidatures — {{ mission.titre }}</h1>
+    <p class="subtitle">Triées par score IA (décroissant) · Présélection auto si score &gt; 70</p>
+    <p class="entreprise">{{ mission.entrepriseNom }}</p>
+  </section>
+
+  @if (actionError) {
+    <p class="action-error">{{ actionError }}</p>
+  }
+
+  @if (candidatures.length === 0) {
+    <p class="status">Aucune candidature pour le moment.</p>
+  } @else {
+    <div class="cand-list">
+      @for (c of candidatures; track c.id; let i = $index) {
+        <article class="card cand-card">
+          <div class="cand-header">
+            <span class="rank">#{{ i + 1 }}</span>
+            <strong>{{ c.etudiantNom }}</strong>
+            <span [class]="statutClass(c.statut)">{{ statutLabels[c.statut] }}</span>
+          </div>
+          @if (c.scoreIA != null) {
+            <p class="score">
+              Score IA : <strong>{{ c.scoreIA | number:'1.1-1' }}/100</strong>
+              @if (c.scoreFromAi) { <span class="ai-badge">FastAPI</span> }
+            </p>
+          }
+          @if (actionsDisponibles(c.statut).length > 0) {
+            <div class="actions">
+              @for (action of actionsDisponibles(c.statut); track action.statut) {
+                <button
+                  type="button"
+                  [class]="action.class"
+                  (click)="changerStatut(c.id, action.statut)"
+                >
+                  {{ action.label }}
+                </button>
+              }
+            </div>
+          }
+          <div class="historique-block">
+            <button type="button" class="btn-historique" (click)="toggleHistorique(c.id)">
+              {{ isHistoriqueExpanded(c.id) ? 'Masquer l\'historique' : 'Voir l\'historique' }}
+            </button>
+            @if (isHistoriqueExpanded(c.id)) {
+              @if (isHistoriqueLoading(c.id)) {
+                <p class="historique-loading">Chargement de l'historique...</p>
+              } @else if (!historiques[c.id] || historiques[c.id].length === 0) {
+                <p class="historique-empty">Aucun changement de statut enregistré.</p>
+              } @else {
+                <ul class="historique-list">
+                  @for (h of historiques[c.id]; track h.id) {
+                    <li>
+                      <span class="historique-date">{{ h.dateChangement | date:'short' }}</span>
+                      <span class="historique-transition">
+                        {{ statutLabels[h.ancienStatut] }} → {{ statutLabels[h.nouveauStatut] }}
+                      </span>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+}

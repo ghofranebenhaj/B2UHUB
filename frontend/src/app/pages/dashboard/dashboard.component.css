@@ -1,0 +1,74 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-header h1 {
+  font-size: 1.75rem;
+  color: var(--primary);
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.kpi {
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.kpi.accent {
+  border-left: 4px solid var(--accent);
+}
+
+.kpi-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.kpi.accent .kpi-value {
+  color: var(--accent);
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.error-box { border-left: 4px solid var(--danger); }
+
+.chart-card h2 {
+  font-size: 1.1rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 320px;
+  max-width: 100%;
+}
+
+.status {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+}
+
+.status.error {
+  color: var(--danger);
+}

@@ -1,0 +1,84 @@
+:root {
+  --primary: #1e3a5f;
+  --primary-light: #2d5a8e;
+  --accent: #e67e22;
+  --bg: #f4f6f9;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --muted: #6b7280;
+  --success: #16a34a;
+  --warning: #ca8a04;
+  --danger: #dc2626;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(30, 58, 95, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--primary-light);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button, .btn {
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-light);
+}
+
+.btn-accent {
+  background: var(--accent);
+  color: white;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-ouverte { background: #dbeafe; color: #1d4ed8; }
+.badge-en-cours { background: #fef3c7; color: #b45309; }
+.badge-cloturee { background: #e5e7eb; color: #374151; }
+.badge-attente { background: #fef9c3; color: #a16207; }
+.badge-preselectionnee { background: #e0e7ff; color: #4338ca; }
+.badge-entretien { background: #fef3c7; color: #b45309; }
+.badge-acceptee { background: #dcfce7; color: #15803d; }
+.badge-refusee { background: #fee2e2; color: #b91c1c; }
