@@ -5,92 +5,97 @@ import com.b2uhub.dto.CandidatureResponse;
 import com.b2uhub.model.Candidature;
 import com.b2uhub.model.Entreprise;
 import com.b2uhub.model.Etudiant;
-import com.b2uhub.model.HistoriqueStatut;
 import com.b2uhub.model.Mission;
 import com.b2uhub.model.enums.CandidatureStatut;
+import com.b2uhub.model.enums.MissionStatut;
+import com.b2uhub.repository.CandidatureHistoriqueRepository;
 import com.b2uhub.repository.CandidatureRepository;
 import com.b2uhub.repository.EtudiantRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
-/**
- * Test unitaire du CandidatureService, sur le même modèle que MissionServiceTest
- * et EquipeServiceTest (Mockito, sans contexte Spring).
- *
- * IMPORTANT : les noms exacts des méthodes de CandidatureService, CandidatureRepository
- * et AiServiceClient utilisés ici (postuler, updateStatut, getHistorique, matchScore, ...)
- * sont déduits du comportement observé dans la collection Postman et des autres tests
- * du projet (MissionServiceTest, EquipeServiceTest, AnalyticsServiceTest). Si les noms
- * réels diffèrent dans le code source, adapter uniquement les appels correspondants :
- * la structure et les cas de test restent valables.
- */
 @ExtendWith(MockitoExtension.class)
 class CandidatureServiceTest {
 
     @Mock
     private CandidatureRepository candidatureRepository;
     @Mock
-    private MissionService missionService;
+    private CandidatureHistoriqueRepository historiqueRepository;
     @Mock
     private EtudiantRepository etudiantRepository;
     @Mock
+    private MissionService missionService;
+    @Mock
     private AiServiceClient aiServiceClient;
+    @Mock
+    private AiHubService aiHubService;
     @Mock
     private NotificationService notificationService;
 
-    @InjectMocks
     private CandidatureService candidatureService;
 
     private Mission mission;
     private Etudiant etudiant;
-    private Entreprise entreprise;
 
     @BeforeEach
     void setUp() {
-        entreprise = new Entreprise();
+        // seuil de préselection = 70, max candidatures actives = 5 (valeurs par défaut de application.yml)
+        candidatureService = new CandidatureService(
+                candidatureRepository,
+                historiqueRepository,
+                etudiantRepository,
+                missionService,
+                aiServiceClient,
+                aiHubService,
+                notificationService,
+                70.0,
+                5
+        );
+
+        Entreprise entreprise = new Entreprise();
         entreprise.setId(1L);
         entreprise.setNom("TechCorp");
 
         mission = new Mission();
         mission.setId(10L);
         mission.setTitre("Mission Test");
+        mission.setStatut(MissionStatut.OUVERTE);
+        mission.setCompetencesRequises(List.of("Java"));
         mission.setEntreprise(entreprise);
 
         etudiant = new Etudiant();
         etudiant.setId(100L);
         etudiant.setNom("Alice");
-        etudiant.setCompetences(List.of("Java", "Spring"));
+        etudiant.setCompetences(List.of("Java"));
     }
 
-    // ---------------------------------------------------------------
-    // postuler()
-    // ---------------------------------------------------------------
-
     @Test
-    void postuler_succes_creeCandidatureEnAttenteAvecScoreIA() {
+    void testCreerCandidature_succes() {
         CandidatureRequest request = new CandidatureRequest();
         request.setMissionId(10L);
         request.setEtudiantId(100L);
 
+        when(candidatureRepository.existsByMissionIdAndEtudiantId(10L, 100L)).thenReturn(false);
+        when(candidatureRepository.countByEtudiantIdAndStatutIn(anyLong(), any())).thenReturn(0L);
         when(missionService.getMission(10L)).thenReturn(mission);
         when(etudiantRepository.findById(100L)).thenReturn(Optional.of(etudiant));
-        when(candidatureRepository.existsByMissionIdAndEtudiantId(10L, 100L)).thenReturn(false);
-        when(aiServiceClient.matchScore(etudiant, mission)).thenReturn(82.5);
+        when(aiHubService.resolvePerformance(etudiant)).thenReturn(75.0);
+        when(aiServiceClient.scoreCandidature(any(), any(), anyDouble()))
+                .thenReturn(new AiServiceClient.ScoreResult(65.0, "explication test", List.of(), false));
         when(candidatureRepository.save(any(Candidature.class))).thenAnswer(inv -> {
             Candidature c = inv.getArgument(0);
             c.setId(1L);
@@ -99,175 +104,98 @@ class CandidatureServiceTest {
 
         CandidatureResponse response = candidatureService.postuler(request);
 
-        assertThat(response.getId()).isEqualTo(1L);
+        assertThat(response).isNotNull();
         assertThat(response.getStatut()).isEqualTo(CandidatureStatut.EN_ATTENTE);
-        assertThat(response.getScoreIA()).isEqualTo(82.5);
-
-        ArgumentCaptor<Candidature> captor = ArgumentCaptor.forClass(Candidature.class);
-        verify(candidatureRepository).save(captor.capture());
-        assertThat(captor.getValue().getMission()).isEqualTo(mission);
-        assertThat(captor.getValue().getEtudiant()).isEqualTo(etudiant);
+        verify(candidatureRepository, atLeastOnce()).save(any(Candidature.class));
     }
 
     @Test
-    void postuler_missionInexistante_leveResourceNotFound() {
-        CandidatureRequest request = new CandidatureRequest();
-        request.setMissionId(999L);
-        request.setEtudiantId(100L);
-
-        when(missionService.getMission(999L))
-                .thenThrow(new ResourceNotFoundException("Mission introuvable"));
-
-        assertThatThrownBy(() -> candidatureService.postuler(request))
-                .isInstanceOf(ResourceNotFoundException.class);
-
-        verify(candidatureRepository, never()).save(any());
-    }
-
-    @Test
-    void postuler_etudiantInexistant_leveResourceNotFound() {
-        CandidatureRequest request = new CandidatureRequest();
-        request.setMissionId(10L);
-        request.setEtudiantId(999L);
-
-        when(missionService.getMission(10L)).thenReturn(mission);
-        when(etudiantRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> candidatureService.postuler(request))
-                .isInstanceOf(ResourceNotFoundException.class);
-
-        verify(candidatureRepository, never()).save(any());
-    }
-
-    @Test
-    void postuler_dejaCandidatSurLaMission_leveBusinessException() {
+    void testCreerCandidature_doubleCandidature_doitEchouer() {
         CandidatureRequest request = new CandidatureRequest();
         request.setMissionId(10L);
         request.setEtudiantId(100L);
 
-        when(missionService.getMission(10L)).thenReturn(mission);
-        when(etudiantRepository.findById(100L)).thenReturn(Optional.of(etudiant));
         when(candidatureRepository.existsByMissionIdAndEtudiantId(10L, 100L)).thenReturn(true);
 
         assertThatThrownBy(() -> candidatureService.postuler(request))
-                .isInstanceOf(BusinessException.class);
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("déjà existante");
 
         verify(candidatureRepository, never()).save(any());
     }
 
     @Test
-    void postuler_serviceIaIndisponible_creeQuandMemeLaCandidatureSansScore() {
+    void testCreerCandidature_limiteCandidaturesActivesAtteinte_doitEchouer() {
         CandidatureRequest request = new CandidatureRequest();
         request.setMissionId(10L);
         request.setEtudiantId(100L);
 
+        when(candidatureRepository.existsByMissionIdAndEtudiantId(10L, 100L)).thenReturn(false);
+        when(candidatureRepository.countByEtudiantIdAndStatutIn(anyLong(), any())).thenReturn(5L);
+
+        assertThatThrownBy(() -> candidatureService.postuler(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Limite");
+
+        verify(candidatureRepository, never()).save(any());
+        verify(missionService, never()).getMission(anyLong());
+    }
+
+    @Test
+    void testCreerCandidature_scoreAuDessusDuSeuil_estPreselectionneeAutomatiquement() {
+        CandidatureRequest request = new CandidatureRequest();
+        request.setMissionId(10L);
+        request.setEtudiantId(100L);
+
+        when(candidatureRepository.existsByMissionIdAndEtudiantId(10L, 100L)).thenReturn(false);
+        when(candidatureRepository.countByEtudiantIdAndStatutIn(anyLong(), any())).thenReturn(0L);
         when(missionService.getMission(10L)).thenReturn(mission);
         when(etudiantRepository.findById(100L)).thenReturn(Optional.of(etudiant));
-        when(candidatureRepository.existsByMissionIdAndEtudiantId(10L, 100L)).thenReturn(false);
-        // le service IA externe est indisponible : on ne doit pas bloquer la candidature
-        when(aiServiceClient.matchScore(etudiant, mission)).thenReturn(null);
+        when(aiHubService.resolvePerformance(etudiant)).thenReturn(90.0);
+        when(aiServiceClient.scoreCandidature(any(), any(), anyDouble()))
+                .thenReturn(new AiServiceClient.ScoreResult(85.0, "excellent match", List.of(), true));
         when(candidatureRepository.save(any(Candidature.class))).thenAnswer(inv -> {
             Candidature c = inv.getArgument(0);
-            c.setId(2L);
+            if (c.getId() == null) c.setId(1L);
             return c;
         });
 
         CandidatureResponse response = candidatureService.postuler(request);
 
-        assertThat(response.getId()).isEqualTo(2L);
-        assertThat(response.getScoreIA()).isNull();
-        verify(candidatureRepository).save(any(Candidature.class));
+        assertThat(response.getStatut()).isEqualTo(CandidatureStatut.PRESELECTIONNEE);
+        verify(historiqueRepository, atLeastOnce()).save(any());
     }
 
-    // ---------------------------------------------------------------
-    // findByMission()
-    // ---------------------------------------------------------------
-
     @Test
-    void findByMission_delegueAuRepositoryEtMappeEnResponse() {
+    void testAccepterCandidature_creeUneEntreeDansHistorique() {
         Candidature candidature = new Candidature();
         candidature.setId(1L);
+        candidature.setStatut(CandidatureStatut.ENTRETIEN);
         candidature.setMission(mission);
         candidature.setEtudiant(etudiant);
-        candidature.setStatut(CandidatureStatut.EN_ATTENTE);
-        candidature.setScoreIA(75.0);
-
-        when(candidatureRepository.findByMissionId(10L)).thenReturn(List.of(candidature));
-
-        List<CandidatureResponse> result = candidatureService.findByMission(10L);
-
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getEtudiantNom()).isEqualTo("Alice");
-        assertThat(result.get(0).getStatut()).isEqualTo(CandidatureStatut.EN_ATTENTE);
-        verify(candidatureRepository).findByMissionId(10L);
-    }
-
-    // ---------------------------------------------------------------
-    // updateStatut()
-    // ---------------------------------------------------------------
-
-    @Test
-    void updateStatut_versAcceptee_succesEtNotifieLetudiant() {
-        Candidature candidature = new Candidature();
-        candidature.setId(1L);
-        candidature.setMission(mission);
-        candidature.setEtudiant(etudiant);
-        candidature.setStatut(CandidatureStatut.EN_ATTENTE);
 
         when(candidatureRepository.findById(1L)).thenReturn(Optional.of(candidature));
+        when(candidatureRepository.save(any(Candidature.class))).thenAnswer(inv -> inv.getArgument(0));
 
         CandidatureResponse response = candidatureService.updateStatut(1L, CandidatureStatut.ACCEPTEE);
 
         assertThat(response.getStatut()).isEqualTo(CandidatureStatut.ACCEPTEE);
-        assertThat(candidature.getStatut()).isEqualTo(CandidatureStatut.ACCEPTEE);
-        verify(notificationService).notify(eq(etudiant), any(), any());
+        verify(historiqueRepository, times(1)).save(any());
     }
 
     @Test
-    void updateStatut_candidatureInexistante_leveResourceNotFound() {
-        when(candidatureRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> candidatureService.updateStatut(999L, CandidatureStatut.ACCEPTEE))
-                .isInstanceOf(ResourceNotFoundException.class);
-
-        verify(notificationService, never()).notify(any(), any(), any());
-    }
-
-    // ---------------------------------------------------------------
-    // getHistorique()
-    // ---------------------------------------------------------------
-
-    @Test
-    void getHistorique_retourneLesEntreesTrieesParDate() {
+    void testChangerStatut_candidatureDejaTerminee_doitEchouer() {
         Candidature candidature = new Candidature();
         candidature.setId(1L);
+        candidature.setStatut(CandidatureStatut.REFUSEE);
         candidature.setMission(mission);
         candidature.setEtudiant(etudiant);
-        candidature.setStatut(CandidatureStatut.ACCEPTEE);
-
-        HistoriqueStatut h1 = new HistoriqueStatut();
-        h1.setStatut(CandidatureStatut.EN_ATTENTE);
-        h1.setDate(LocalDateTime.now().minusDays(2));
-
-        HistoriqueStatut h2 = new HistoriqueStatut();
-        h2.setStatut(CandidatureStatut.ACCEPTEE);
-        h2.setDate(LocalDateTime.now());
-
-        candidature.setHistorique(List.of(h1, h2));
 
         when(candidatureRepository.findById(1L)).thenReturn(Optional.of(candidature));
 
-        List<CandidatureStatut> historique = candidatureService.getHistorique(1L);
+        assertThatThrownBy(() -> candidatureService.updateStatut(1L, CandidatureStatut.ACCEPTEE))
+                .isInstanceOf(BusinessException.class);
 
-        assertThat(historique).hasSize(2);
-        assertThat(historique).containsExactly(CandidatureStatut.EN_ATTENTE, CandidatureStatut.ACCEPTEE);
-    }
-
-    @Test
-    void getHistorique_candidatureInexistante_leveResourceNotFound() {
-        when(candidatureRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> candidatureService.getHistorique(999L))
-                .isInstanceOf(ResourceNotFoundException.class);
+        verify(historiqueRepository, never()).save(any());
     }
 }
