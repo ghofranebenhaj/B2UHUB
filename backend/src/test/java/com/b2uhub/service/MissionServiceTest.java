@@ -6,9 +6,12 @@ import com.b2uhub.model.Entreprise;
 import com.b2uhub.model.Mission;
 import com.b2uhub.model.enums.CandidatureStatut;
 import com.b2uhub.model.enums.MissionStatut;
+import com.b2uhub.model.enums.RoleUtilisateur;
 import com.b2uhub.repository.CandidatureRepository;
 import com.b2uhub.repository.EntrepriseRepository;
 import com.b2uhub.repository.MissionRepository;
+import com.b2uhub.support.SecurityTestUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +46,7 @@ class MissionServiceTest {
 
     @BeforeEach
     void setUp() {
+        SecurityTestUtils.authenticateAs(1L, RoleUtilisateur.ENTREPRISE);
         entreprise = new Entreprise();
         entreprise.setId(1L);
         entreprise.setNom("TechCorp");
@@ -53,6 +57,11 @@ class MissionServiceTest {
         mission.setStatut(MissionStatut.OUVERTE);
         mission.setCompetencesRequises(List.of("Java"));
         mission.setEntreprise(entreprise);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityTestUtils.clearAuthentication();
     }
 
     @Test
@@ -90,10 +99,10 @@ class MissionServiceTest {
     void create_entrepriseInexistante_leveResourceNotFound() {
         MissionRequest request = new MissionRequest();
         request.setTitre("Nouvelle mission");
-        request.setEntrepriseId(999L);
+        request.setEntrepriseId(1L);
         request.setCompetencesRequises(List.of("Java"));
 
-        when(entrepriseRepository.findById(999L)).thenReturn(Optional.empty());
+        when(entrepriseRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> missionService.create(request))
                 .isInstanceOf(ResourceNotFoundException.class);

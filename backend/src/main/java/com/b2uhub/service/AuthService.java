@@ -11,6 +11,8 @@ import com.b2uhub.model.enums.RoleUtilisateur;
 import com.b2uhub.repository.EntrepriseRepository;
 import com.b2uhub.repository.EtudiantRepository;
 import com.b2uhub.repository.UtilisateurRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UtilisateurRepository utilisateurRepository;
     private final EtudiantRepository etudiantRepository;
@@ -70,6 +74,7 @@ public class AuthService {
                 ? etudiantRepository.save((Etudiant) utilisateur)
                 : entrepriseRepository.save((Entreprise) utilisateur);
 
+        log.info("Inscription réussie pour {} (role={}, id={})", saved.getEmail(), saved.getRole(), saved.getId());
         return buildAuthResponse(saved);
     }
 
@@ -81,6 +86,7 @@ public class AuthService {
             throw new UnauthorizedException("Email ou mot de passe incorrect");
         }
 
+        log.info("Connexion réussie pour {} (role={})", utilisateur.getEmail(), utilisateur.getRole());
         return buildAuthResponse(utilisateur);
     }
 

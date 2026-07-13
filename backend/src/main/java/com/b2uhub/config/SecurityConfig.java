@@ -3,6 +3,7 @@ package com.b2uhub.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -14,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -34,23 +36,29 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/h2-console/**",
                                 "/ws/**",
-                                "/api/health"
+                                "/api/health",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
                         ).permitAll()
-                        // Voir la liste des candidats d'une mission : réservé aux entreprises
+                        // Lecture publique pour le mode démo frontend (sans JWT)
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/analytics/**",
+                                "/api/missions/**",
+                                "/api/entreprises/**",
+                                "/api/etudiants/**",
+                                "/api/ai/**"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/candidatures/mission/**")
-                        .hasRole("ENTREPRISE")
-                        // Changer le statut d'une candidature (accepter/refuser) : entreprise
+                        .hasAnyRole("ENTREPRISE", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/candidatures/*/statut")
-                        .hasRole("ENTREPRISE")
-                        // Postuler à une mission : réservé aux étudiants
+                        .hasAnyRole("ENTREPRISE", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/candidatures")
-                        .hasRole("ETUDIANT")
-                        // Créer / modifier / supprimer une mission : entreprise
-                        .requestMatchers(HttpMethod.POST, "/api/missions").hasRole("ENTREPRISE")
-                        .requestMatchers(HttpMethod.PUT, "/api/missions/**").hasRole("ENTREPRISE")
-                        .requestMatchers(HttpMethod.PATCH, "/api/missions/**").hasRole("ENTREPRISE")
-                        .requestMatchers(HttpMethod.DELETE, "/api/missions/**").hasRole("ENTREPRISE")
-                        // Le reste de l'API nécessite juste d'être authentifié
+                        .hasAnyRole("ETUDIANT", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/missions").hasAnyRole("ENTREPRISE", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/missions/**").hasAnyRole("ENTREPRISE", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/missions/**").hasAnyRole("ENTREPRISE", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/missions/**").hasAnyRole("ENTREPRISE", "ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )

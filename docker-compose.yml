@@ -57,11 +57,21 @@ services:
       DB_USER: b2uhub
       DB_PASSWORD: b2uhub
       B2U_AI_SERVICE_BASE_URL: http://ai-service:8000
+      B2U_JWT_SECRET: ${B2U_JWT_SECRET:-change-me-in-production-use-at-least-256-bits-secret-key-b2uhub}
     depends_on:
       postgres:
         condition: service_healthy
       ai-service:
         condition: service_started
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8081:8081"
+    environment:
+      BACKEND_BASE_URL: http://backend:8080
+    depends_on:
+      - backend
 
   frontend:
     image: node:22-alpine
@@ -72,7 +82,7 @@ services:
     ports:
       - "4200:4200"
     depends_on:
-      - backend
+      - gateway
 
 volumes:
   b2uhub_pg_data:

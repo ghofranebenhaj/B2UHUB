@@ -4,6 +4,8 @@ import com.b2uhub.dto.*;
 import com.b2uhub.model.Etudiant;
 import com.b2uhub.model.Mission;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -17,6 +19,8 @@ import java.util.Map;
  */
 @Component
 public class AiServiceClient {
+
+    private static final Logger log = LoggerFactory.getLogger(AiServiceClient.class);
 
     private final AiServiceFeignClient feignClient;
     private final ObjectMapper objectMapper;
@@ -44,7 +48,8 @@ public class AiServiceClient {
                 List<ScoreBreakdownDto> breakdown = castBreakdown(response.get("breakdown"));
                 return new ScoreResult(scoreNum.doubleValue(), explication, breakdown, true);
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Service IA indisponible pour scoring, fallback local: {}", ex.getMessage());
         }
         return computeLocalScore(etudiant, mission, performanceAnterieure);
     }
@@ -53,7 +58,8 @@ public class AiServiceClient {
         try {
             Map<String, Object> response = feignClient.smartMatching(body);
             if (response != null) return mapSmartMatching(response);
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Service IA indisponible pour smart-matching, fallback local: {}", ex.getMessage());
         }
         SmartMatchingResponseDto fallback = new SmartMatchingResponseDto();
         fallback.setAgent("SmartMatchingAgent");
@@ -67,7 +73,8 @@ public class AiServiceClient {
         try {
             Map<String, Object> response = feignClient.collaboration(body);
             if (response != null) return mapCollaboration(response);
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Service IA indisponible pour smart-matching, fallback local: {}", ex.getMessage());
         }
         CollaborationResponseDto fallback = new CollaborationResponseDto();
         fallback.setAgent("CollaborationInnovationAgent");
@@ -92,7 +99,8 @@ public class AiServiceClient {
                 response.setCompetencesCommunes(castStringList(res.get("competences_communes")));
                 return response;
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Service IA indisponible pour smart-matching, fallback local: {}", ex.getMessage());
         }
         double sim = matchingSimilarity(etudiant.getCompetences(), mission.getCompetencesRequises()) * 100;
         AiMatchResponse fallback = new AiMatchResponse();
@@ -122,7 +130,8 @@ public class AiServiceClient {
             if (response != null && response.get("recommandations") instanceof List<?> list) {
                 return list.stream().map(this::mapRecommend).toList();
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Service IA indisponible pour smart-matching, fallback local: {}", ex.getMessage());
         }
         return List.of();
     }
@@ -156,7 +165,8 @@ public class AiServiceClient {
                 }
                 return new TeamResult(ids, coverage, explication, true);
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Service IA indisponible pour smart-matching, fallback local: {}", ex.getMessage());
         }
         return new TeamResult(List.of(), 0, "Service IA indisponible — formation locale impossible.", false);
     }
@@ -176,7 +186,8 @@ public class AiServiceClient {
                         true
                 );
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Service IA indisponible pour smart-matching, fallback local: {}", ex.getMessage());
         }
         return new CvAnalysisResult(etudiant.getCompetences(), List.of(), 50.0, false);
     }

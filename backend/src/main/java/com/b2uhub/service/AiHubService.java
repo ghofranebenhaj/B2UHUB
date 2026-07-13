@@ -23,6 +23,7 @@ import java.util.Map;
 public class AiHubService {
 
     private final AiServiceClient aiServiceClient;
+    private final MatchingService matchingService;
     private final EtudiantRepository etudiantRepository;
     private final MissionRepository missionRepository;
     private final EntrepriseRepository entrepriseRepository;
@@ -31,6 +32,7 @@ public class AiHubService {
 
     public AiHubService(
             AiServiceClient aiServiceClient,
+            MatchingService matchingService,
             EtudiantRepository etudiantRepository,
             MissionRepository missionRepository,
             EntrepriseRepository entrepriseRepository,
@@ -38,6 +40,7 @@ public class AiHubService {
             @Value("${b2u.ai-service.base-url}") String aiServiceUrl
     ) {
         this.aiServiceClient = aiServiceClient;
+        this.matchingService = matchingService;
         this.etudiantRepository = etudiantRepository;
         this.missionRepository = missionRepository;
         this.entrepriseRepository = entrepriseRepository;
@@ -64,9 +67,7 @@ public class AiHubService {
     }
 
     public AiMatchResponse match(Long etudiantId, Long missionId) {
-        Etudiant etudiant = getEtudiant(etudiantId);
-        Mission mission = getMission(missionId);
-        return aiServiceClient.match(etudiant, mission);
+        return matchingService.match(etudiantId, missionId);
     }
 
     public AiServiceClient.CvAnalysisResult analyzeCv(Long etudiantId) {
