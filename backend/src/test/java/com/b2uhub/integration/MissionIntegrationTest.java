@@ -118,15 +118,16 @@ class MissionIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.titre").value("Développeur Angular"));
 
+        // consultation liste : publique en mode démo (GET /api/missions)
         mockMvc.perform(get("/api/missions")
-                        .header("Authorization", "Bearer " + entrepriseToken)
                         .param("competence", "Angular"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.id == " + missionId + ")]").exists());
 
-        // sans token du tout : rejeté
+        // détail mission : également accessible sans token (lecture publique)
         mockMvc.perform(get("/api/missions/" + missionId))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.titre").value("Développeur Angular"));
     }
 
     @Test

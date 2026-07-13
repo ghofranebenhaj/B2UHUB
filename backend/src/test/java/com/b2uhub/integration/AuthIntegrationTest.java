@@ -117,15 +117,16 @@ class AuthIntegrationTest {
 
     @Test
     void endpointProtege_sansToken_doitRenvoyer403() throws Exception {
-        // toute route /api/** non explicitement listée en "permitAll" exige un token
-        mockMvc.perform(get("/api/missions"))
-                .andExpect(status().isForbidden());
-
+        // Les GET lecture (missions, analytics) sont publics en mode démo frontend.
+        // Les écritures restent protégées par rôle JWT.
         mockMvc.perform(post("/api/missions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"titre": "x", "description": "x", "entrepriseId": 1}
                                 """))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/notifications"))
                 .andExpect(status().isForbidden());
     }
 

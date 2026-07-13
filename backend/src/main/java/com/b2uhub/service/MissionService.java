@@ -9,6 +9,9 @@ import com.b2uhub.model.enums.MissionStatut;
 import com.b2uhub.repository.CandidatureRepository;
 import com.b2uhub.repository.EntrepriseRepository;
 import com.b2uhub.repository.MissionRepository;
+import com.b2uhub.security.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +20,8 @@ import java.util.List;
 @Service
 @Transactional
 public class MissionService {
+
+    private static final Logger log = LoggerFactory.getLogger(MissionService.class);
 
     private final MissionRepository missionRepository;
     private final EntrepriseRepository entrepriseRepository;
@@ -43,6 +48,7 @@ public class MissionService {
     }
 
     public MissionResponse create(MissionRequest request) {
+        SecurityUtils.requireEntrepriseSelf(request.getEntrepriseId());
         Mission mission = new Mission();
         applyRequest(mission, request);
         if (mission.getStatut() == MissionStatut.CLOTUREE) {
@@ -72,12 +78,15 @@ public class MissionService {
 
     public MissionResponse update(Long id, MissionRequest request) {
         Mission mission = getMission(id);
+        SecurityUtils.requireEntrepriseOwnerOfMission(mission);
+        SecurityUtils.requireEntrepriseSelf(request.getEntrepriseId());
         applyRequest(mission, request);
         return MissionResponse.from(missionRepository.save(mission));
     }
 
     public MissionResponse updateStatut(Long id, MissionStatut statut) {
         Mission mission = getMission(id);
+        SecurityUtils.requireEntrepriseOwnerOfMission(mission);
         if (statut == MissionStatut.CLOTUREE && mission.getStatut() != MissionStatut.CLOTUREE) {
             validateMissionCanBeClosed(id);
         }
@@ -100,6 +109,8 @@ public class MissionService {
 
     public void delete(Long id) {
         Mission mission = getMission(id);
+        SecurityUtils.requireEntrepriseOwnerOfMission(mission);
+        log.info("Suppression de la mission id={} par utilisateur id={}", id, SecurityUtils.getCurrentUserId());
         if (mission.getEquipe() != null) {
             mission.setEquipe(null);
         }

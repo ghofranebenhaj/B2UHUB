@@ -1,5 +1,6 @@
 package com.b2uhub.config;
 
+import com.b2uhub.model.Admin;
 import com.b2uhub.model.Candidature;
 import com.b2uhub.model.Entreprise;
 import com.b2uhub.model.Etudiant;
@@ -7,6 +8,7 @@ import com.b2uhub.model.Mission;
 import com.b2uhub.model.enums.CandidatureStatut;
 import com.b2uhub.model.enums.MissionStatut;
 import com.b2uhub.model.enums.RoleUtilisateur;
+import com.b2uhub.repository.AdminRepository;
 import com.b2uhub.repository.CandidatureRepository;
 import com.b2uhub.repository.EntrepriseRepository;
 import com.b2uhub.repository.EtudiantRepository;
@@ -28,6 +30,7 @@ public class DataInitializer {
 
     @Bean
     CommandLineRunner seedData(
+            AdminRepository adminRepository,
             EntrepriseRepository entrepriseRepository,
             EtudiantRepository etudiantRepository,
             MissionRepository missionRepository,
@@ -35,12 +38,24 @@ public class DataInitializer {
             PasswordEncoder passwordEncoder
     ) {
         return args -> {
+            if (adminRepository.count() == 0) {
+                seedAdmin(adminRepository, passwordEncoder);
+            }
             if (entrepriseRepository.count() == 0) {
                 seedFullDemo(entrepriseRepository, etudiantRepository, missionRepository, candidatureRepository, passwordEncoder);
             } else if (candidatureRepository.count() == 0) {
                 seedCandidaturesForDashboard(etudiantRepository, missionRepository, candidatureRepository);
             }
         };
+    }
+
+    private void seedAdmin(AdminRepository adminRepository, PasswordEncoder passwordEncoder) {
+        Admin admin = new Admin();
+        admin.setEmail("admin@b2uhub.local");
+        admin.setMotDePasse(passwordEncoder.encode(DEMO_PASSWORD_RAW));
+        admin.setNom("Administrateur B2U-HUB");
+        admin.setRole(RoleUtilisateur.ADMIN);
+        adminRepository.save(admin);
     }
 
     private void seedFullDemo(

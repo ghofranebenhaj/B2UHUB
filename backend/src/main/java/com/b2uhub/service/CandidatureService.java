@@ -11,6 +11,9 @@ import com.b2uhub.model.enums.CandidatureStatut;
 import com.b2uhub.repository.CandidatureHistoriqueRepository;
 import com.b2uhub.repository.CandidatureRepository;
 import com.b2uhub.repository.EtudiantRepository;
+import com.b2uhub.security.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,8 @@ import java.util.List;
 @Service
 @Transactional
 public class CandidatureService {
+
+    private static final Logger log = LoggerFactory.getLogger(CandidatureService.class);
 
     private final CandidatureRepository candidatureRepository;
     private final CandidatureHistoriqueRepository historiqueRepository;
@@ -61,6 +66,8 @@ public class CandidatureService {
     }
 
     public List<CandidatureResponse> findByMission(Long missionId) {
+        Mission mission = missionService.getMission(missionId);
+        SecurityUtils.requireEntrepriseOwnerOfMission(mission);
         return candidatureRepository.findByMissionId(missionId).stream()
                 .sorted(Comparator
                         .comparing(Candidature::getScoreIA, Comparator.nullsLast(Comparator.reverseOrder()))
@@ -75,6 +82,7 @@ public class CandidatureService {
     }
 
     public CandidatureResponse postuler(CandidatureRequest request) {
+        SecurityUtils.requireEtudiantSelf(request.getEtudiantId());
         if (candidatureRepository.existsByMissionIdAndEtudiantId(request.getMissionId(), request.getEtudiantId())) {
             throw new BusinessException("Candidature déjà existante pour cette mission");
         }
@@ -104,6 +112,8 @@ public class CandidatureService {
         candidature.setStatut(CandidatureStatut.EN_ATTENTE);
 
         Candidature saved = candidatureRepository.save(candidature);
+        log.info("Candidature créée id={} mission={} étudiant={} scoreIA={}",
+                saved.getId(), mission.getId(), etudiant.getId(), score.score());
 
         if (score.score() >= preselectionScoreThreshold) {
             changerStatut(saved, CandidatureStatut.PRESELECTIONNEE, false);
@@ -128,6 +138,7 @@ public class CandidatureService {
 
     public CandidatureResponse updateStatut(Long id, CandidatureStatut statut) {
         Candidature candidature = getCandidature(id);
+        SecurityUtils.requireEntrepriseOwnerOfMission(candidature.getMission());
         changerStatut(candidature, statut, true);
         candidatureRepository.save(candidature);
 

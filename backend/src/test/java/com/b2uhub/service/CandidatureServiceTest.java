@@ -8,9 +8,12 @@ import com.b2uhub.model.Etudiant;
 import com.b2uhub.model.Mission;
 import com.b2uhub.model.enums.CandidatureStatut;
 import com.b2uhub.model.enums.MissionStatut;
+import com.b2uhub.model.enums.RoleUtilisateur;
 import com.b2uhub.repository.CandidatureHistoriqueRepository;
 import com.b2uhub.repository.CandidatureRepository;
 import com.b2uhub.repository.EtudiantRepository;
+import com.b2uhub.support.SecurityTestUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +56,7 @@ class CandidatureServiceTest {
 
     @BeforeEach
     void setUp() {
+        SecurityTestUtils.authenticateAs(100L, RoleUtilisateur.ETUDIANT);
         // seuil de préselection = 70, max candidatures actives = 5 (valeurs par défaut de application.yml)
         candidatureService = new CandidatureService(
                 candidatureRepository,
@@ -81,6 +85,11 @@ class CandidatureServiceTest {
         etudiant.setId(100L);
         etudiant.setNom("Alice");
         etudiant.setCompetences(List.of("Java"));
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityTestUtils.clearAuthentication();
     }
 
     @Test
@@ -168,6 +177,7 @@ class CandidatureServiceTest {
 
     @Test
     void testAccepterCandidature_creeUneEntreeDansHistorique() {
+        SecurityTestUtils.authenticateAs(1L, RoleUtilisateur.ENTREPRISE);
         Candidature candidature = new Candidature();
         candidature.setId(1L);
         candidature.setStatut(CandidatureStatut.ENTRETIEN);
@@ -185,6 +195,7 @@ class CandidatureServiceTest {
 
     @Test
     void testChangerStatut_candidatureDejaTerminee_doitEchouer() {
+        SecurityTestUtils.authenticateAs(1L, RoleUtilisateur.ENTREPRISE);
         Candidature candidature = new Candidature();
         candidature.setId(1L);
         candidature.setStatut(CandidatureStatut.REFUSEE);
