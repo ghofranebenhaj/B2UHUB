@@ -52,7 +52,10 @@ public class NotificationService {
         try {
             messagingTemplate.convertAndSend("/topic/notifications/" + userId, objectMapper.writeValueAsString(payload));
             messagingTemplate.convertAndSend("/topic/notifications", objectMapper.writeValueAsString(payload));
-        } catch (JsonProcessingException ignored) {
+        } catch (Exception ignored) {
+            // On ignore volontairement toute erreur d'envoi WebSocket (connexion perdue,
+            // erreur de serialisation JSON, etc.) : un echec de notification temps reel
+            // ne doit jamais faire echouer ou annuler la sauvegarde de la notification en base.
         }
     }
 }
